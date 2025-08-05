@@ -2,6 +2,8 @@
 let scanHistory = [];
 let students = [];
 let forms = [];
+let cameraStream = null;
+let isCameraActive = false;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -15,6 +17,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Set up barcode scanner input
     setupBarcodeScanner();
+    
+    // Set up camera UI
+    setupCameraUI();
     
     // Load today's attendance report by default
     loadAttendanceReport();
@@ -56,10 +61,16 @@ function setupBarcodeScanner() {
     const barcodeInput = document.getElementById('barcodeInput');
     let barcodeBuffer = '';
     let lastKeystroke = 0;
+    let submitTimeout = null;
     
     // Handle barcode scanner input
     barcodeInput.addEventListener('input', function(e) {
         const currentTime = new Date().getTime();
+        
+        // Clear any existing timeout
+        if (submitTimeout) {
+            clearTimeout(submitTimeout);
+        }
         
         // If time between keystrokes is less than 50ms, it's likely from a scanner
         if (currentTime - lastKeystroke < 50) {
@@ -70,21 +81,26 @@ function setupBarcodeScanner() {
         
         lastKeystroke = currentTime;
         
-        // Process complete barcode after a brief delay
-        setTimeout(() => {
-            if (barcodeBuffer && currentTime - lastKeystroke >= 50) {
+        // Auto-submit after a brief delay (for scanners that don't send Enter)
+        submitTimeout = setTimeout(() => {
+            if (barcodeBuffer && currentTime - lastKeystroke >= 100) {
                 processBarcode(barcodeBuffer);
                 barcodeInput.value = '';
                 barcodeBuffer = '';
             }
-        }, 100);
+        }, 150); // 150ms delay for auto-submit
     });
     
     // Handle Enter key for manual input
     barcodeInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter' && e.target.value.trim()) {
+            // Clear the auto-submit timeout since Enter was pressed
+            if (submitTimeout) {
+                clearTimeout(submitTimeout);
+            }
             processBarcode(e.target.value.trim());
             e.target.value = '';
+            barcodeBuffer = '';
         }
     });
     
@@ -106,18 +122,54 @@ function setupBarcodeScanner() {
     });
 }
 
-// Submit manual barcode
+// Handle manual barcode input
 function submitManualBarcode() {
     const manualInput = document.getElementById('manualBarcode');
     const barcode = manualInput.value.trim();
     
     if (barcode) {
         processBarcode(barcode);
-        manualInput.value = ''; // Clear the input after submission
-    } else {
-        showToast('Please enter a barcode', 'error');
+        manualInput.value = '';
     }
 }
+
+// Add auto-submit for manual input as well
+document.addEventListener('DOMContentLoaded', function() {
+    const manualInput = document.getElementById('manualBarcode');
+    let manualSubmitTimeout = null;
+    
+    if (manualInput) {
+        manualInput.addEventListener('input', function(e) {
+            const currentTime = new Date().getTime();
+            
+            // Clear any existing timeout
+            if (manualSubmitTimeout) {
+                clearTimeout(manualSubmitTimeout);
+            }
+            
+            // Auto-submit after 1 second of no typing
+            manualSubmitTimeout = setTimeout(() => {
+                const barcode = e.target.value.trim();
+                if (barcode) {
+                    processBarcode(barcode);
+                    e.target.value = '';
+                }
+            }, 1000);
+        });
+        
+        // Handle Enter key for manual input
+        manualInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.target.value.trim()) {
+                // Clear the auto-submit timeout since Enter was pressed
+                if (manualSubmitTimeout) {
+                    clearTimeout(manualSubmitTimeout);
+                }
+                processBarcode(e.target.value.trim());
+                e.target.value = '';
+            }
+        });
+    }
+});
 
 // Process barcode scan
 async function processBarcode(barcode) {
@@ -1369,5 +1421,164 @@ function downloadSingleBarcode(barcode, name, studentId, studentClass, form) {
     } catch (error) {
         console.error('Error downloading barcode:', error);
         showToast('Failed to download barcode', 'error');
+    }
+}
+
+// Camera Barcode Scanning Functions
+async function startCamera() {
+    try {
+        // Check if device supports camera
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast('Camera not supported on this device', 'error');
+            return;
+        }
+
+        // Request camera permission
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'environment', // Use back camera on mobile
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            } 
+        });
+
+        cameraStream = stream;
+        isCameraActive = true;
+
+        // Show camera UI
+        document.getElementById('startCameraBtn').classList.add('hidden');
+        document.getElementById('stopCameraBtn').classList.remove('hidden');
+        document.getElementById('cameraVideo').classList.remove('hidden');
+
+        // Set video source
+        const video = document.getElementById('cameraVideo');
+        video.srcObject = stream;
+        video.play();
+
+        // Start barcode detection
+        startBarcodeDetection();
+
+        showToast('Camera started successfully', 'success');
+
+    } catch (error) {
+        console.error('Camera error:', error);
+        if (error.name === 'NotAllowedError') {
+            showToast('Camera permission denied. Please allow camera access.', 'error');
+        } else if (error.name === 'NotFoundError') {
+            showToast('No camera found on this device', 'error');
+        } else {
+            showToast('Failed to start camera: ' + error.message, 'error');
+        }
+    }
+}
+
+function stopCamera() {
+    if (cameraStream) {
+        // Stop all tracks
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+
+    isCameraActive = false;
+
+    // Hide camera UI
+    document.getElementById('startCameraBtn').classList.remove('hidden');
+    document.getElementById('stopCameraBtn').classList.add('hidden');
+    document.getElementById('cameraVideo').classList.add('hidden');
+
+    // Stop barcode detection
+    if (typeof Quagga !== 'undefined') {
+        Quagga.stop();
+    }
+
+    showToast('Camera stopped', 'info');
+}
+
+function startBarcodeDetection() {
+    if (typeof Quagga === 'undefined') {
+        console.error('Quagga library not loaded');
+        return;
+    }
+
+    Quagga.init({
+        inputStream: {
+            name: "Live",
+            type: "LiveStream",
+            target: document.getElementById('cameraVideo'),
+            constraints: {
+                width: 640,
+                height: 480,
+                facingMode: "environment"
+            },
+        },
+        locator: {
+            patchSize: "medium",
+            halfSample: true
+        },
+        numOfWorkers: 2,
+        frequency: 10,
+        decoder: {
+            readers: [
+                "code_128_reader",
+                "ean_reader",
+                "ean_8_reader",
+                "code_39_reader",
+                "code_39_vin_reader",
+                "codabar_reader",
+                "upc_reader",
+                "upc_e_reader"
+            ]
+        },
+        locate: true
+    }, function(err) {
+        if (err) {
+            console.error('Quagga initialization failed:', err);
+            showToast('Failed to initialize barcode scanner', 'error');
+            return;
+        }
+        console.log('Quagga initialized successfully');
+        Quagga.start();
+    });
+
+    Quagga.onDetected(function(result) {
+        const code = result.codeResult.code;
+        console.log('Barcode detected:', code);
+        
+        // Process the scanned barcode immediately
+        processBarcode(code);
+        
+        // Play success sound
+        playSuccessSound();
+        
+        // Show success message
+        showToast(`Barcode scanned: ${code}`, 'success');
+        
+        // Stop camera after successful scan
+        setTimeout(() => {
+            stopCamera();
+        }, 1000);
+    });
+
+    Quagga.onProcessed(function(result) {
+        if (result) {
+            if (result.codeResult && result.codeResult.code) {
+                console.log('Processing barcode:', result.codeResult.code);
+            }
+        }
+    });
+}
+
+// Check if device is mobile
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// Show camera button only on mobile devices
+function setupCameraUI() {
+    const cameraScanner = document.getElementById('cameraScanner');
+    if (isMobileDevice()) {
+        cameraScanner.style.display = 'block';
+    } else {
+        cameraScanner.style.display = 'none';
     }
 }

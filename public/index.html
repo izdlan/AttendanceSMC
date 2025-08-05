@@ -6,6 +6,7 @@
     <title>SMK Chukai - Attendance System</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -58,6 +59,19 @@
                         <i class="fas fa-qrcode scan-icon"></i>
                         <h3>Ready to Scan</h3>
                         <p>Focus on the input field below and scan student barcode</p>
+                        
+                        <!-- Camera Scanner Section -->
+                        <div class="camera-scanner" id="cameraScanner">
+                            <button class="btn-camera" onclick="startCamera()" id="startCameraBtn">
+                                <i class="fas fa-camera"></i> Use Camera Scanner
+                            </button>
+                            <button class="btn-camera hidden" onclick="stopCamera()" id="stopCameraBtn">
+                                <i class="fas fa-stop"></i> Stop Camera
+                            </button>
+                            <video id="cameraVideo" class="camera-video hidden" autoplay playsinline></video>
+                            <canvas id="cameraCanvas" class="camera-canvas hidden"></canvas>
+                        </div>
+                        
                         <input type="text" id="barcodeInput" placeholder="Scan barcode here..." autofocus>
                         <div class="manual-input">
                             <input type="text" id="manualBarcode" placeholder="Or enter barcode manually">
