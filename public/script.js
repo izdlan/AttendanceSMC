@@ -392,8 +392,8 @@ async function loadStats() {
         
         document.getElementById('totalStudents').textContent = stats.total_students || 0;
         document.getElementById('presentToday').textContent = stats.present_today || 0;
-        document.getElementById('completedToday').textContent = stats.completed_today || 0;
-        document.getElementById('absentLateToday').textContent = stats.absent_late_today || 0;
+        document.getElementById('lateToday').textContent = stats.late_today || 0;
+        document.getElementById('absentToday').textContent = stats.absent_today || 0;
         
     } catch (error) {
         console.error('Error loading stats:', error);
@@ -1651,5 +1651,253 @@ function setupCameraUI() {
         cameraScanner.style.display = 'block';
     } else {
         cameraScanner.style.display = 'none';
+    }
+}
+
+// Show late report
+async function showLateReport() {
+    const today = new Date().toISOString().split('T')[0];
+    
+    try {
+        const response = await fetch(`/api/attendance/${today}?status=late`);
+        const lateData = await response.json();
+        
+        if (lateData.length === 0) {
+            showToast('No late students today', 'info');
+            return;
+        }
+        
+        // Create modal content
+        let modalContent = `
+            <div class="modal" id="lateModal" style="display: block;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-clock"></i> Late Report - ${new Date().toLocaleDateString()}</h3>
+                        <span class="close" onclick="closeLateModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div style="margin-bottom: 20px;">
+                            <strong>Total Late:</strong> ${lateData.length} students
+                        </div>
+                        <table class="attendance-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-user"></i> Student Name</th>
+                                    <th><i class="fas fa-id-card"></i> Student ID</th>
+                                    <th><i class="fas fa-graduation-cap"></i> Form</th>
+                                    <th><i class="fas fa-users"></i> Class</th>
+                                    <th><i class="fas fa-clock"></i> Check-in Time</th>
+                                    <th><i class="fas fa-exclamation-triangle"></i> Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${lateData.map(student => `
+                                    <tr>
+                                        <td>${student.name}</td>
+                                        <td>${student.student_id}</td>
+                                        <td>Form ${student.form}</td>
+                                        <td>${student.class}</td>
+                                        <td>${student.time_in || 'Not checked in'}</td>
+                                        <td>
+                                            <span class="status-badge status-late">
+                                                LATE
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        <div style="margin-top: 20px; text-align: center;">
+                            <button class="btn-primary" onclick="exportLateReport('${today}')">
+                                <i class="fas fa-download"></i> Export to CSV
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalContent);
+        
+    } catch (error) {
+        console.error('Error loading late report:', error);
+        showToast('Failed to load late report', 'error');
+    }
+}
+
+// Close late modal
+function closeLateModal() {
+    const modal = document.getElementById('lateModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Export late report to CSV
+async function exportLateReport(date) {
+    try {
+        const response = await fetch(`/api/attendance/${date}?status=late`);
+        const lateData = await response.json();
+        
+        if (lateData.length === 0) {
+            showToast('No data to export', 'warning');
+            return;
+        }
+        
+        // Create CSV content
+        const headers = ['Student Name', 'Student ID', 'Form', 'Class', 'Check-in Time', 'Status'];
+        const csvContent = [
+            headers.join(','),
+            ...lateData.map(student => [
+                `"${student.name}"`,
+                student.student_id,
+                `Form ${student.form}`,
+                `"${student.class}"`,
+                student.time_in || 'Not checked in',
+                'LATE'
+            ].join(','))
+        ].join('\n');
+        
+        // Download CSV file
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `late_report_${date}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        showToast('Late report exported successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error exporting late report:', error);
+        showToast('Failed to export late report', 'error');
+    }
+}
+
+// Show absent report
+async function showAbsentReport() {
+    const today = new Date().toISOString().split('T')[0];
+    
+    try {
+        const response = await fetch(`/api/absent/${today}`);
+        const absentData = await response.json();
+        
+        if (absentData.length === 0) {
+            showToast('No absent students today', 'info');
+            return;
+        }
+        
+        // Create modal content
+        let modalContent = `
+            <div class="modal" id="absentModal" style="display: block;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Absent Report - ${new Date().toLocaleDateString()}</h3>
+                        <span class="close" onclick="closeAbsentModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div style="margin-bottom: 20px;">
+                            <strong>Total Absent:</strong> ${absentData.length} students
+                        </div>
+                        <table class="attendance-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-user"></i> Student Name</th>
+                                    <th><i class="fas fa-id-card"></i> Student ID</th>
+                                    <th><i class="fas fa-graduation-cap"></i> Form</th>
+                                    <th><i class="fas fa-users"></i> Class</th>
+                                    <th><i class="fas fa-clock"></i> Check-in Time</th>
+                                    <th><i class="fas fa-exclamation-triangle"></i> Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${absentData.map(student => `
+                                    <tr>
+                                        <td>${student.name}</td>
+                                        <td>${student.student_id}</td>
+                                        <td>Form ${student.form}</td>
+                                        <td>${student.class}</td>
+                                        <td>Not checked in</td>
+                                        <td>
+                                            <span class="status-badge status-absent">
+                                                ABSENT
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        <div style="margin-top: 20px; text-align: center;">
+                            <button class="btn-primary" onclick="exportAbsentReport('${today}')">
+                                <i class="fas fa-download"></i> Export to CSV
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add modal to page
+        document.body.insertAdjacentHTML('beforeend', modalContent);
+        
+    } catch (error) {
+        console.error('Error loading absent report:', error);
+        showToast('Failed to load absent report', 'error');
+    }
+}
+
+// Close absent modal
+function closeAbsentModal() {
+    const modal = document.getElementById('absentModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Export absent report to CSV
+async function exportAbsentReport(date) {
+    try {
+        const response = await fetch(`/api/absent/${date}`);
+        const absentData = await response.json();
+        
+        if (absentData.length === 0) {
+            showToast('No data to export', 'warning');
+            return;
+        }
+        
+        // Create CSV content
+        const headers = ['Student Name', 'Student ID', 'Form', 'Class', 'Check-in Time', 'Status'];
+        const csvContent = [
+            headers.join(','),
+            ...absentData.map(student => [
+                `"${student.name}"`,
+                student.student_id,
+                `Form ${student.form}`,
+                `"${student.class}"`,
+                'Not checked in',
+                'ABSENT'
+            ].join(','))
+        ].join('\n');
+        
+        // Download CSV file
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `absent_report_${date}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        showToast('Absent report exported successfully', 'success');
+        
+    } catch (error) {
+        console.error('Error exporting absent report:', error);
+        showToast('Failed to export absent report', 'error');
     }
 }

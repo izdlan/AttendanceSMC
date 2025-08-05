@@ -443,17 +443,55 @@ app.post('/api/attendance/scan', async (req, res) => {
     }
 });
 
-// Get attendance for a specific date with optional filters
+// Get attendance for a specific date with optional filters (including status)
 app.get('/api/attendance/:date', async (req, res) => {
     try {
         const { date } = req.params;
-        const { form, class: studentClass } = req.query;
+        const { form, class: studentClass, status } = req.query;
         
         let query = `
             SELECT a.*, s.name, s.class, s.form 
             FROM attendance a 
             JOIN students s ON a.student_id = s.student_id 
             WHERE a.date = ?
+        `;
+        const params = [date];
+        
+        if (form) {
+            query += ' AND s.form = ?';
+            params.push(parseInt(form));
+        }
+        
+        if (studentClass) {
+            query += ' AND s.class = ?';
+            params.push(studentClass);
+        }
+        
+        if (status) {
+            query += ' AND a.status = ?';
+            params.push(status);
+        }
+        
+        query += ' ORDER BY s.name';
+        
+        const [rows] = await connection.execute(query, params);
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get absent students for a specific date
+app.get('/api/absent/:date', async (req, res) => {
+    try {
+        const { date } = req.params;
+        const { form, class: studentClass } = req.query;
+        
+        let query = `
+            SELECT s.name, s.student_id, s.form, s.class
+            FROM students s 
+            LEFT JOIN attendance a ON s.student_id = a.student_id AND a.date = ?
+            WHERE a.student_id IS NULL
         `;
         const params = [date];
         
@@ -480,40 +518,37 @@ app.get('/api/attendance/:date', async (req, res) => {
 app.get('/api/stats', async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
-        const currentTime = new Date().toTimeString().split(' ')[0];
-        const cutoffTime = '07:45:00'; // 7:45 AM cutoff
         
-        // Get basic stats
-        const [rows] = await connection.execute(`
-            SELECT 
-                COUNT(DISTINCT s.id) as total_students,
-                COUNT(DISTINCT a.student_id) as present_today,
-                COUNT(DISTINCT a.student_id) as completed_today
-            FROM students s
+        // Get total students
+        const [totalStudents] = await connection.execute('SELECT COUNT(*) as count FROM students');
+        
+        // Get present students today
+        const [presentToday] = await connection.execute(
+            'SELECT COUNT(*) as count FROM attendance WHERE date = ? AND status = "present"',
+            [today]
+        );
+        
+        // Get late students today
+        const [lateToday] = await connection.execute(
+            'SELECT COUNT(*) as count FROM attendance WHERE date = ? AND status = "late"',
+            [today]
+        );
+        
+        // Get absent students today (students who haven't checked in)
+        const [absentToday] = await connection.execute(`
+            SELECT COUNT(*) as count 
+            FROM students s 
             LEFT JOIN attendance a ON s.student_id = a.student_id AND a.date = ?
+            WHERE a.student_id IS NULL
         `, [today]);
         
-        // Calculate absent/late students
-        let absentLateCount = 0;
+        res.json({
+            total_students: totalStudents[0].count,
+            present_today: presentToday[0].count,
+            late_today: lateToday[0].count,
+            absent_today: absentToday[0].count
+        });
         
-        if (currentTime >= cutoffTime) {
-            // After 7:45 AM, count students who are absent or late
-            const [absentLateRows] = await connection.execute(`
-                SELECT COUNT(DISTINCT s.id) as absent_late_count
-                FROM students s
-                LEFT JOIN attendance a ON s.student_id = a.student_id AND a.date = ?
-                WHERE a.student_id IS NULL OR a.time_in > ?
-            `, [today, cutoffTime]);
-            
-            absentLateCount = absentLateRows[0].absent_late_count;
-        }
-        
-        const stats = {
-            ...rows[0],
-            absent_late_today: absentLateCount
-        };
-        
-        res.json(stats);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

@@ -15,7 +15,7 @@
                 <h1><i class="fas fa-graduation-cap"></i> SMK Chukai</h1>
                 <h2>Attendance System</h2>
             </div>
-            <div class="stats" id="stats">
+            <div class="stats">
                 <div class="stat-card">
                     <i class="fas fa-users"></i>
                     <span class="stat-number" id="totalStudents">0</span>
@@ -26,15 +26,15 @@
                     <span class="stat-number" id="presentToday">0</span>
                     <span class="stat-label">Present Today</span>
                 </div>
-                <div class="stat-card">
+                <div class="stat-card" onclick="showLateReport()" style="cursor: pointer;">
                     <i class="fas fa-clock"></i>
-                    <span class="stat-number" id="completedToday">0</span>
-                    <span class="stat-label">Completed</span>
+                    <span class="stat-number" id="lateToday">0</span>
+                    <span class="stat-label">Late Today</span>
                 </div>
-                <div class="stat-card" onclick="showAbsentLateReport()" style="cursor: pointer;">
+                <div class="stat-card" onclick="showAbsentReport()" style="cursor: pointer;">
                     <i class="fas fa-exclamation-triangle"></i>
-                    <span class="stat-number" id="absentLateToday">0</span>
-                    <span class="stat-label">Absent/Late</span>
+                    <span class="stat-number" id="absentToday">0</span>
+                    <span class="stat-label">Absent Today</span>
                 </div>
             </div>
         </header>
