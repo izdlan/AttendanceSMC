@@ -2,7 +2,7 @@ const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
+// Environment variables are handled by Railway
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,6 +11,11 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// Health check endpoint for Railway
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK', message: 'Attendance system is running' });
+});
 
 // MySQL connection configuration
 const dbConfig = {
