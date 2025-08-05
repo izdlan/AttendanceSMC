@@ -4,6 +4,7 @@ let students = [];
 let forms = [];
 let cameraStream = null;
 let isCameraActive = false;
+let isProcessingScan = false; // Prevent multiple simultaneous scans
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -178,6 +179,14 @@ async function processBarcode(barcode) {
         return;
     }
     
+    // Prevent multiple simultaneous scans
+    if (isProcessingScan) {
+        console.log('Scan already in progress, ignoring duplicate scan');
+        return;
+    }
+    
+    isProcessingScan = true;
+    
     try {
         showToast('Processing scan...', 'info');
         
@@ -224,6 +233,11 @@ async function processBarcode(barcode) {
     } catch (error) {
         console.error('Scan error:', error);
         showToast('Connection error. Please try again.', 'error');
+    } finally {
+        // Reset the processing flag after a delay
+        setTimeout(() => {
+            isProcessingScan = false;
+        }, 2000); // 2 second cooldown to prevent rapid duplicate scans
     }
     
     // Refocus on barcode input

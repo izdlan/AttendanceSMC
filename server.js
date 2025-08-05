@@ -121,8 +121,31 @@ async function initializeDatabase() {
         }
 
         console.log('Database initialized successfully');
+        
+        // Clean up any existing duplicate attendance records
+        await cleanupDuplicateAttendance();
     } catch (error) {
         console.error('Error initializing database:', error);
+    }
+}
+
+// Clean up duplicate attendance records
+async function cleanupDuplicateAttendance() {
+    try {
+        console.log('Cleaning up duplicate attendance records...');
+        
+        // Find and remove duplicate records, keeping only the latest one per student per day
+        await connection.execute(`
+            DELETE a1 FROM attendance a1
+            INNER JOIN attendance a2 
+            WHERE a1.id < a2.id 
+            AND a1.student_id = a2.student_id 
+            AND a1.date = a2.date
+        `);
+        
+        console.log('Duplicate attendance records cleaned up');
+    } catch (error) {
+        console.error('Error cleaning up duplicate attendance:', error);
     }
 }
 
@@ -337,7 +360,7 @@ app.post('/api/attendance/scan', async (req, res) => {
         const currentTime = new Date().toTimeString().split(' ')[0];
         const currentDateTime = new Date();
         
-                // Check if student already has attendance record for today
+        // Check if student already has attendance record for today
         const [attendanceRows] = await connection.execute(
             'SELECT * FROM attendance WHERE student_id = ? AND date = ?',
             [student.student_id, today]
