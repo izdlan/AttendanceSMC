@@ -190,12 +190,22 @@ async function processBarcode(barcode) {
     try {
         showToast('Processing scan...', 'info');
         
+        // Get current client time
+        const now = new Date();
+        const clientTime = now.toLocaleTimeString('en-US', { 
+            hour12: false,
+            timeZone: 'Asia/Kuala_Lumpur' // Malaysia timezone
+        });
+        
         const response = await fetch('/api/attendance/scan', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ barcode: barcode.trim() })
+            body: JSON.stringify({ 
+                barcode: barcode.trim(),
+                clientTime: clientTime
+            })
         });
         
         const result = await response.json();

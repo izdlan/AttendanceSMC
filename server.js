@@ -337,7 +337,7 @@ app.post('/api/students', async (req, res) => {
 // Record attendance by barcode scan
 app.post('/api/attendance/scan', async (req, res) => {
     try {
-        const { barcode } = req.body;
+        const { barcode, clientTime } = req.body;
         
         if (!barcode) {
             res.status(400).json({ error: 'Barcode is required' });
@@ -357,7 +357,19 @@ app.post('/api/attendance/scan', async (req, res) => {
         
         const student = studentRows[0];
         const today = new Date().toISOString().split('T')[0];
-        const currentTime = new Date().toTimeString().split(' ')[0];
+        
+        // Use client time if provided, otherwise use server time
+        let currentTime;
+        if (clientTime) {
+            currentTime = clientTime;
+        } else {
+            // Use server's current time but ensure it's in local timezone
+            const now = new Date();
+            currentTime = now.toLocaleTimeString('en-US', { 
+                hour12: false,
+                timeZone: 'Asia/Kuala_Lumpur' // Malaysia timezone
+            });
+        }
         const currentDateTime = new Date();
         
         // Check if student already has attendance record for today
