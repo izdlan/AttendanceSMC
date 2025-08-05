@@ -1787,7 +1787,21 @@ async function showAbsentReport() {
         const absentData = await response.json();
         
         if (absentData.length === 0) {
-            showToast('No absent students today', 'info');
+            const currentTime = new Date().toLocaleTimeString('en-US', { 
+                hour12: false,
+                timeZone: 'Asia/Kuala_Lumpur'
+            });
+            
+            // Parse current time to get hours and minutes
+            const [hours, minutes] = currentTime.split(':').map(Number);
+            const currentTimeInMinutes = hours * 60 + minutes;
+            const CHECK_IN_END = 9 * 60; // 9:00 AM in minutes
+            
+            if (currentTimeInMinutes < CHECK_IN_END) {
+                showToast('Absent students will be calculated after 9:00 AM', 'info');
+            } else {
+                showToast('No absent students today', 'info');
+            }
             return;
         }
         

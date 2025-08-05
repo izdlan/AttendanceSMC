@@ -149,6 +149,34 @@ async function cleanupDuplicateAttendance() {
     }
 }
 
+// Reset daily counts at midnight
+function resetDailyCounts() {
+    console.log('Daily counts reset at midnight');
+    // The counts will automatically reset when the day changes
+    // since we calculate them based on the current date
+}
+
+// Schedule daily reset at midnight
+function scheduleDailyReset() {
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0); // Next midnight
+    
+    const timeUntilMidnight = midnight.getTime() - now.getTime();
+    
+    // Schedule the reset
+    setTimeout(() => {
+        resetDailyCounts();
+        // Schedule the next reset (24 hours later)
+        setInterval(resetDailyCounts, 24 * 60 * 60 * 1000);
+    }, timeUntilMidnight);
+    
+    console.log(`Daily reset scheduled for ${midnight.toLocaleString()}`);
+}
+
+// Initialize daily reset schedule
+scheduleDailyReset();
+
 // API Routes
 
 // Get all forms and classes
@@ -487,6 +515,10 @@ app.get('/api/absent/:date', async (req, res) => {
         const { date } = req.params;
         const { form, class: studentClass } = req.query;
         
+        // Check if the requested date is today
+        const today = new Date().toISOString().split('T')[0];
+        const isToday = date === today;
+        
         let query = `
             SELECT s.name, s.student_id, s.form, s.class
             FROM students s 
@@ -508,6 +540,26 @@ app.get('/api/absent/:date', async (req, res) => {
         query += ' ORDER BY s.name';
         
         const [rows] = await connection.execute(query, params);
+        
+        // If it's today, check if it's after 9 AM before returning absent students
+        if (isToday) {
+            const currentTime = new Date().toLocaleTimeString('en-US', { 
+                hour12: false,
+                timeZone: 'Asia/Kuala_Lumpur'
+            });
+            
+            // Parse current time to get hours and minutes
+            const [hours, minutes] = currentTime.split(':').map(Number);
+            const currentTimeInMinutes = hours * 60 + minutes;
+            const CHECK_IN_END = 9 * 60; // 9:00 AM in minutes
+            
+            // Only return absent students if it's after 9 AM
+            if (currentTimeInMinutes < CHECK_IN_END) {
+                res.json([]);
+                return;
+            }
+        }
+        
         res.json(rows);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -518,6 +570,17 @@ app.get('/api/absent/:date', async (req, res) => {
 app.get('/api/stats', async (req, res) => {
     try {
         const today = new Date().toISOString().split('T')[0];
+        const currentTime = new Date().toLocaleTimeString('en-US', { 
+            hour12: false,
+            timeZone: 'Asia/Kuala_Lumpur'
+        });
+        
+        // Parse current time to get hours and minutes
+        const [hours, minutes] = currentTime.split(':').map(Number);
+        const currentTimeInMinutes = hours * 60 + minutes;
+        
+        // Define time boundaries
+        const CHECK_IN_END = 9 * 60; // 9:00 AM in minutes
         
         // Get total students
         const [totalStudents] = await connection.execute('SELECT COUNT(*) as count FROM students');
@@ -534,19 +597,24 @@ app.get('/api/stats', async (req, res) => {
             [today]
         );
         
-        // Get absent students today (students who haven't checked in)
-        const [absentToday] = await connection.execute(`
-            SELECT COUNT(*) as count 
-            FROM students s 
-            LEFT JOIN attendance a ON s.student_id = a.student_id AND a.date = ?
-            WHERE a.student_id IS NULL
-        `, [today]);
+        // Calculate absent students - only after 9 AM
+        let absentToday = 0;
+        if (currentTimeInMinutes >= CHECK_IN_END) {
+            // After 9 AM, count students who haven't checked in
+            const [absentTodayResult] = await connection.execute(`
+                SELECT COUNT(*) as count 
+                FROM students s 
+                LEFT JOIN attendance a ON s.student_id = a.student_id AND a.date = ?
+                WHERE a.student_id IS NULL
+            `, [today]);
+            absentToday = absentTodayResult[0].count;
+        }
         
         res.json({
             total_students: totalStudents[0].count,
             present_today: presentToday[0].count,
             late_today: lateToday[0].count,
-            absent_today: absentToday[0].count
+            absent_today: absentToday
         });
         
     } catch (error) {
