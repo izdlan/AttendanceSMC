@@ -94,26 +94,30 @@ async function initializeDatabase() {
             )
         `);
 
-        // Force reinitialize with new class names
-        console.log('Clearing existing data and reinitializing with new class names...');
-        await connection.execute('DELETE FROM attendance');
-        await connection.execute('DELETE FROM students');
-        await connection.execute('DELETE FROM forms');
+        // Check if forms data exists, if not, insert it
+        const [existingForms] = await connection.execute('SELECT COUNT(*) as count FROM forms');
         
-        // Insert forms data
-        const formsData = [
-            { form: 1, name: 'Form 1', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) },
-            { form: 2, name: 'Form 2', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) },
-            { form: 3, name: 'Form 3', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) },
-            { form: 4, name: 'Form 4', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) },
-            { form: 5, name: 'Form 5', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) }
-        ];
+        if (existingForms[0].count === 0) {
+            console.log('No forms data found, inserting default forms...');
+            
+            // Insert forms data
+            const formsData = [
+                { form: 1, name: 'Form 1', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) },
+                { form: 2, name: 'Form 2', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) },
+                { form: 3, name: 'Form 3', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) },
+                { form: 4, name: 'Form 4', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) },
+                { form: 5, name: 'Form 5', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) }
+            ];
 
-        for (const formData of formsData) {
-            await connection.execute(
-                'INSERT INTO forms (form, name, classes) VALUES (?, ?, ?)',
-                [formData.form, formData.name, formData.classes]
-            );
+            for (const formData of formsData) {
+                await connection.execute(
+                    'INSERT INTO forms (form, name, classes) VALUES (?, ?, ?)',
+                    [formData.form, formData.name, formData.classes]
+                );
+            }
+            console.log('Forms data inserted successfully');
+        } else {
+            console.log('Forms data already exists');
         }
 
         console.log('Database initialized successfully');
@@ -128,14 +132,40 @@ async function initializeDatabase() {
 app.get('/api/forms', async (req, res) => {
     try {
         const [rows] = await connection.execute('SELECT * FROM forms ORDER BY form');
+        
+        if (rows.length === 0) {
+            // If no forms data exists, return default data
+            console.log('No forms data in database, returning default forms');
+            const defaultForms = [
+                { form: 1, name: 'Form 1', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+                { form: 2, name: 'Form 2', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+                { form: 3, name: 'Form 3', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+                { form: 4, name: 'Form 4', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+                { form: 5, name: 'Form 5', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] }
+            ];
+            res.json(defaultForms);
+            return;
+        }
+        
         const forms = rows.map(row => ({
             form: row.form,
             name: row.name,
             classes: JSON.parse(row.classes)
         }));
+        
+        console.log('Forms API returning:', forms);
         res.json(forms);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error in /api/forms:', error);
+        // Return default forms data as fallback
+        const defaultForms = [
+            { form: 1, name: 'Form 1', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+            { form: 2, name: 'Form 2', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+            { form: 3, name: 'Form 3', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+            { form: 4, name: 'Form 4', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+            { form: 5, name: 'Form 5', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] }
+        ];
+        res.json(defaultForms);
     }
 });
 

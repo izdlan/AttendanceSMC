@@ -201,9 +201,19 @@ function updateScanHistory() {
 // Load forms data
 async function loadForms() {
     try {
+        console.log('Loading forms from API...');
         const response = await fetch('/api/forms');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         forms = await response.json();
-        console.log('Forms loaded:', forms);
+        console.log('Forms loaded successfully:', forms);
+        
+        // Load classes after forms are loaded
+        loadClasses();
+        
     } catch (error) {
         console.error('Error loading forms:', error);
         // Fallback forms data if API fails
@@ -214,6 +224,8 @@ async function loadForms() {
             { form: 4, classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
             { form: 5, classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] }
         ];
+        console.log('Using fallback forms data:', forms);
+        loadClasses();
     }
 }
 
@@ -236,7 +248,7 @@ function loadClasses() {
     if (selectedForm && forms.length > 0) {
         const formData = forms.find(f => f.form === selectedForm);
         console.log('Found form data:', formData);
-        if (formData) {
+        if (formData && formData.classes) {
             formData.classes.forEach(className => {
                 const option = document.createElement('option');
                 option.value = className;
@@ -244,12 +256,14 @@ function loadClasses() {
                 classSelect.appendChild(option);
             });
             console.log('Loaded classes for form', selectedForm, ':', formData.classes);
+        } else {
+            console.warn('No form data found for form:', selectedForm);
         }
     }
     
     if (filterForm && forms.length > 0) {
         const formData = forms.find(f => f.form === filterForm);
-        if (formData) {
+        if (formData && formData.classes) {
             formData.classes.forEach(className => {
                 const option = document.createElement('option');
                 option.value = className;
