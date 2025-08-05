@@ -1,0 +1,21 @@
+{
+  "name": "smk-chukai-attendance",
+  "version": "1.0.0",
+  "description": "SMK Chukai Attendance System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["attendance", "school", "barcode", "mysql"],
+  "author": "SMK Chukai",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mysql2": "^3.14.3",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

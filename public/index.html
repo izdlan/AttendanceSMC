@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMK Chukai - Attendance System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1><i class="fas fa-graduation-cap"></i> SMK Chukai</h1>
+                <h2>Attendance System</h2>
+            </div>
+            <div class="stats" id="stats">
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <span class="stat-number" id="totalStudents">0</span>
+                    <span class="stat-label">Total Students</span>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-check-circle"></i>
+                    <span class="stat-number" id="presentToday">0</span>
+                    <span class="stat-label">Present Today</span>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-clock"></i>
+                    <span class="stat-number" id="completedToday">0</span>
+                    <span class="stat-label">Completed</span>
+                </div>
+                <div class="stat-card" onclick="showAbsentLateReport()" style="cursor: pointer;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span class="stat-number" id="absentLateToday">0</span>
+                    <span class="stat-label">Absent/Late</span>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div class="tabs">
+                <button class="tab-button active" onclick="showTab('scan')">
+                    <i class="fas fa-qrcode"></i> Scan Attendance
+                </button>
+                <button class="tab-button" onclick="showTab('students')">
+                    <i class="fas fa-users"></i> Manage Students
+                </button>
+                <button class="tab-button" onclick="showTab('reports')">
+                    <i class="fas fa-chart-bar"></i> Reports
+                </button>
+            </div>
+
+            <!-- Scan Tab -->
+            <div id="scan" class="tab-content active">
+                <div class="scan-section">
+                    <div class="scan-area">
+                        <i class="fas fa-qrcode scan-icon"></i>
+                        <h3>Ready to Scan</h3>
+                        <p>Focus on the input field below and scan student barcode</p>
+                        <input type="text" id="barcodeInput" placeholder="Scan barcode here..." autofocus>
+                        <div class="manual-input">
+                            <input type="text" id="manualBarcode" placeholder="Or enter barcode manually">
+                            <button onclick="submitManualBarcode()">
+                                <i class="fas fa-check"></i> Submit
+                            </button>
+                        </div>
+                    </div>
+                    <div class="recent-scans" id="recentScans">
+                        <h3><i class="fas fa-history"></i> Recent Activity</h3>
+                        <div id="scanHistory"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Tab -->
+            <div id="students" class="tab-content">
+                <div class="students-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-users"></i> Student Management</h3>
+                        <button class="btn-primary" onclick="showAddStudentForm()">
+                            <i class="fas fa-plus"></i> Add Student
+                        </button>
+                        <button class="btn-secondary" onclick="exportAllBarcodes()">
+                            <i class="fas fa-print"></i> Print All Barcodes
+                        </button>
+                        <button class="btn-info" onclick="exportBarcodesByClass()">
+                            <i class="fas fa-print"></i> Print by Class
+                        </button>
+                    </div>
+
+                    <!-- Add Student Form -->
+                    <div id="addStudentForm" class="form-container hidden">
+                        <h4>Add New Student</h4>
+                        <form onsubmit="addStudent(event)">
+                            <div class="form-group">
+                                <label for="studentName">Name:</label>
+                                <input type="text" id="studentName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="studentForm">Form:</label>
+                                <select id="studentForm" required>
+                                    <option value="">Select Form</option>
+                                    <option value="1">Form 1</option>
+                                    <option value="2">Form 2</option>
+                                    <option value="3">Form 3</option>
+                                    <option value="4">Form 4</option>
+                                    <option value="5">Form 5</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="studentClass">Class:</label>
+                                <select id="studentClass" required>
+                                    <option value="">Select Class</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-save"></i> Add Student
+                                </button>
+                                <button type="button" class="btn-secondary" onclick="hideAddStudentForm()">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Students List -->
+                    <div class="students-list">
+                        <div class="filters">
+                            <div class="filter-group">
+                                <label for="filterForm">Filter by Form:</label>
+                                <select id="filterForm">
+                                    <option value="">All Forms</option>
+                                    <option value="1">Form 1</option>
+                                    <option value="2">Form 2</option>
+                                    <option value="3">Form 3</option>
+                                    <option value="4">Form 4</option>
+                                    <option value="5">Form 5</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="filterClass">Filter by Class:</label>
+                                <select id="filterClass">
+                                    <option value="">All Classes</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="search-bar">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="searchStudents" placeholder="Search students...">
+                        </div>
+                        <div id="studentsList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reports" class="tab-content">
+                <div class="reports-section">
+                    <div class="section-header">
+                        <h3><i class="fas fa-chart-bar"></i> Attendance Reports</h3>
+                        <div class="date-selector">
+                            <input type="date" id="reportDate" value="">
+                            <button onclick="loadAttendanceReport()" class="btn-primary">
+                                <i class="fas fa-search"></i> Load Report
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Report Filters -->
+                    <div class="filters" style="margin-bottom: 20px;">
+                        <div class="filter-group">
+                            <label for="reportFilterForm">Filter by Form:</label>
+                            <select id="reportFilterForm">
+                                <option value="">All Forms</option>
+                                <option value="1">Form 1</option>
+                                <option value="2">Form 2</option>
+                                <option value="3">Form 3</option>
+                                <option value="4">Form 4</option>
+                                <option value="5">Form 5</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="reportFilterClass">Filter by Class:</label>
+                            <select id="reportFilterClass">
+                                <option value="">All Classes</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="reportType">Report Type:</label>
+                            <select id="reportType">
+                                <option value="attendance">Attendance Report</option>
+                                <option value="absent-late">Absent/Late Report</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="attendanceReport"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Student Barcode Modal -->
+    <div id="barcodeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Student Barcode</h3>
+                <span class="close" onclick="closeBarcodeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="barcodeDisplay"></div>
+                <div id="studentInfo"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
