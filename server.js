@@ -147,11 +147,28 @@ app.get('/api/forms', async (req, res) => {
             return;
         }
         
-        const forms = rows.map(row => ({
-            form: row.form,
-            name: row.name,
-            classes: JSON.parse(row.classes)
-        }));
+        const forms = rows.map(row => {
+            let classes;
+            try {
+                // Try to parse as JSON first
+                classes = JSON.parse(row.classes);
+            } catch (parseError) {
+                // If JSON parsing fails, try comma-separated string
+                console.log('JSON parse failed for form', row.form, 'classes:', row.classes);
+                if (typeof row.classes === 'string' && row.classes.includes(',')) {
+                    classes = row.classes.split(',').map(c => c.trim());
+                } else {
+                    // Fallback to default classes
+                    classes = ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'];
+                }
+            }
+            
+            return {
+                form: row.form,
+                name: row.name,
+                classes: classes
+            };
+        });
         
         console.log('Forms API returning:', forms);
         res.json(forms);
@@ -219,7 +236,21 @@ app.post('/api/students', async (req, res) => {
             return;
         }
         
-        const classes = JSON.parse(formRows[0].classes);
+        let classes;
+        try {
+            // Try to parse as JSON first
+            classes = JSON.parse(formRows[0].classes);
+        } catch (parseError) {
+            // If JSON parsing fails, try comma-separated string
+            console.log('JSON parse failed for form validation, classes:', formRows[0].classes);
+            if (typeof formRows[0].classes === 'string' && formRows[0].classes.includes(',')) {
+                classes = formRows[0].classes.split(',').map(c => c.trim());
+            } else {
+                // Fallback to default classes
+                classes = ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'];
+            }
+        }
+        
         if (!classes.includes(studentClass)) {
             res.status(400).json({ error: 'Invalid class for this form' });
             return;
@@ -583,7 +614,21 @@ app.put('/api/students/:id', async (req, res) => {
             return;
         }
         
-        const classes = JSON.parse(formRows[0].classes);
+        let classes;
+        try {
+            // Try to parse as JSON first
+            classes = JSON.parse(formRows[0].classes);
+        } catch (parseError) {
+            // If JSON parsing fails, try comma-separated string
+            console.log('JSON parse failed for form validation in update, classes:', formRows[0].classes);
+            if (typeof formRows[0].classes === 'string' && formRows[0].classes.includes(',')) {
+                classes = formRows[0].classes.split(',').map(c => c.trim());
+            } else {
+                // Fallback to default classes
+                classes = ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'];
+            }
+        }
+        
         if (!classes.includes(studentClass)) {
             res.status(400).json({ error: 'Invalid class for this form' });
             return;
