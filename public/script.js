@@ -230,6 +230,8 @@ async function processBarcode(barcode) {
             // Handle different action types
             if (result.action === 'cooldown_checkout' || result.action === 'cooldown_checkin') {
                 showToast(result.message, 'warning');
+            } else if (result.action === 'early_checkin' || result.action === 'late_checkin' || result.action === 'duplicate_checkin') {
+                showToast(result.message, 'warning');
             } else {
                 showToast(result.message, 'success');
                 // Play success sound (if available)
@@ -265,13 +267,45 @@ function updateScanHistory() {
         return;
     }
     
-    historyContainer.innerHTML = scanHistory.map(entry => `
-        <div class="scan-entry ${entry.action}">
-            <div class="student-name">${entry.student.name}</div>
-            <div class="scan-action ${entry.action.includes('cooldown') ? 'cooldown-message' : ''}">${entry.message}</div>
-            <div class="scan-time">${entry.time}</div>
-        </div>
-    `).join('');
+    historyContainer.innerHTML = scanHistory.map(entry => {
+        let actionClass = entry.action;
+        let icon = '';
+        
+        // Add appropriate icons and styling for different actions
+        switch(entry.action) {
+            case 'checkin':
+                icon = '✅';
+                break;
+            case 'early_checkin':
+                icon = '⏰';
+                actionClass += ' cooldown-message';
+                break;
+            case 'late_checkin':
+                icon = '🚫';
+                actionClass += ' cooldown-message';
+                break;
+            case 'duplicate_checkin':
+                icon = '⚠️';
+                actionClass += ' cooldown-message';
+                break;
+            case 'cooldown_checkin':
+                icon = '⏳';
+                actionClass += ' cooldown-message';
+                break;
+            default:
+                icon = '📝';
+        }
+        
+        return `
+            <div class="scan-entry ${actionClass}">
+                <div class="student-name">${entry.student.name}</div>
+                <div class="scan-action ${entry.action.includes('cooldown') || entry.action.includes('early') || entry.action.includes('late') || entry.action.includes('duplicate') ? 'cooldown-message' : ''}">
+                    ${icon} ${entry.message}
+                </div>
+                <div class="scan-time">${entry.time}</div>
+            </div>
+        `;
+    }).join('');
 }
 
 // Load forms data
@@ -777,20 +811,33 @@ function displayAttendanceReport(attendance, date) {
                 </tr>
             </thead>
             <tbody>
-                ${attendance.map(record => `
-                    <tr>
-                        <td>${record.name}</td>
-                        <td>${record.student_id}</td>
-                        <td>Form ${record.form}</td>
-                        <td>${record.class}</td>
-                                        <td>${record.time_in || '-'}</td>
-                <td>
-                    <span class="status-badge ${record.time_in ? 'status-present' : 'status-absent'}">
-                        ${record.time_in ? 'Present' : 'Absent'}
-                    </span>
-                </td>
-                    </tr>
-                `).join('')}
+                ${attendance.map(record => {
+                    let statusClass = 'status-present';
+                    let statusText = 'Present';
+                    
+                    if (record.status === 'late') {
+                        statusClass = 'status-late';
+                        statusText = 'LATE';
+                    } else if (!record.time_in) {
+                        statusClass = 'status-absent';
+                        statusText = 'Absent';
+                    }
+                    
+                    return `
+                        <tr>
+                            <td>${record.name}</td>
+                            <td>${record.student_id}</td>
+                            <td>Form ${record.form}</td>
+                            <td>${record.class}</td>
+                            <td>${record.time_in || '-'}</td>
+                            <td>
+                                <span class="status-badge ${statusClass}">
+                                    ${statusText}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
             </tbody>
         </table>
         

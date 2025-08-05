@@ -370,7 +370,42 @@ app.post('/api/attendance/scan', async (req, res) => {
                 timeZone: 'Asia/Kuala_Lumpur' // Malaysia timezone
             });
         }
-        const currentDateTime = new Date();
+        
+        // Parse current time to get hours and minutes
+        const [hours, minutes] = currentTime.split(':').map(Number);
+        const currentTimeInMinutes = hours * 60 + minutes;
+        
+        // Define time boundaries
+        const CHECK_IN_START = 5 * 60; // 5:00 AM in minutes
+        const LATE_START = 7 * 60 + 30; // 7:30 AM in minutes
+        const CHECK_IN_END = 9 * 60; // 9:00 AM in minutes
+        
+        // Check if current time is within check-in window
+        if (currentTimeInMinutes < CHECK_IN_START) {
+            res.json({
+                message: `Check-in is only allowed from 5:00 AM to 9:00 AM. Current time: ${currentTime}`,
+                student: student,
+                action: 'early_checkin',
+                time: currentTime
+            });
+            return;
+        }
+        
+        if (currentTimeInMinutes > CHECK_IN_END) {
+            res.json({
+                message: `Check-in period has ended at 9:00 AM. You are marked as absent. Current time: ${currentTime}`,
+                student: student,
+                action: 'late_checkin',
+                time: currentTime
+            });
+            return;
+        }
+        
+        // Determine status based on time
+        let status = 'present';
+        if (currentTimeInMinutes >= LATE_START) {
+            status = 'late';
+        }
         
         // Check if student already has attendance record for today
         const [attendanceRows] = await connection.execute(
@@ -379,48 +414,30 @@ app.post('/api/attendance/scan', async (req, res) => {
         );
 
         if (attendanceRows.length > 0) {
-            const attendance = attendanceRows[0];
-            
-            // Check for 2-hour cooldown on check-in
-            const timeIn = new Date(`${today}T${attendance.time_in}`);
-            const hoursSinceCheckIn = (currentDateTime - timeIn) / (1000 * 60 * 60);
-            
-            if (hoursSinceCheckIn < 2) {
-                res.json({
-                    message: `${student.name} already checked in today. Please wait ${(2 - hoursSinceCheckIn).toFixed(1)} hours before checking in again.`,
-                    student: student,
-                    action: 'cooldown_checkin',
-                    remainingHours: (2 - hoursSinceCheckIn).toFixed(1)
-                });
-                return;
-            }
-
-            // Allow new check-in after cooldown period
-            await connection.execute(
-                'UPDATE attendance SET time_in = ? WHERE id = ?',
-                [currentTime, attendance.id]
-            );
-
             res.json({
-                message: `${student.name} checked in again at ${currentTime}`,
+                message: `${student.name} has already checked in today. Only one check-in per day is allowed.`,
                 student: student,
-                action: 'checkin',
+                action: 'duplicate_checkin',
                 time: currentTime
             });
-        } else {
-            // Create new attendance record
-            await connection.execute(
-                'INSERT INTO attendance (student_id, date, time_in) VALUES (?, ?, ?)',
-                [student.student_id, today, currentTime]
-            );
-
-            res.json({
-                message: `${student.name} checked in at ${currentTime}`,
-                student: student,
-                action: 'checkin',
-                time: currentTime
-            });
+            return;
         }
+        
+        // Create new attendance record
+        await connection.execute(
+            'INSERT INTO attendance (student_id, date, time_in, status) VALUES (?, ?, ?, ?)',
+            [student.student_id, today, currentTime, status]
+        );
+
+        const statusMessage = status === 'late' ? 'LATE' : 'PRESENT';
+        res.json({
+            message: `${student.name} checked in at ${currentTime} - Status: ${statusMessage}`,
+            student: student,
+            action: 'checkin',
+            time: currentTime,
+            status: status
+        });
+        
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
