@@ -88,7 +88,7 @@ function setupBarcodeScanner() {
                 barcodeInput.value = '';
                 barcodeBuffer = '';
             }
-        }, 150); // 150ms delay for auto-submit
+        }, 1000); // 1 second delay for auto-submit - better user experience
     });
     
     // Handle Enter key for manual input
@@ -1553,7 +1553,7 @@ function startBarcodeDetection() {
         // Show success message
         showToast(`Barcode scanned: ${code}`, 'success');
         
-        // Stop camera after successful scan
+        // Stop camera after 1 second to let user see the message
         setTimeout(() => {
             stopCamera();
         }, 1000);
