@@ -287,28 +287,39 @@ app.post('/api/students', async (req, res) => {
         );
         
         if (formRows.length === 0) {
-            res.status(400).json({ error: 'Invalid form' });
-            return;
-        }
-        
-        let classes;
-        try {
-            // Try to parse as JSON first
-            classes = JSON.parse(formRows[0].classes);
-        } catch (parseError) {
-            // If JSON parsing fails, try comma-separated string
-            console.log('JSON parse failed for form validation, classes:', formRows[0].classes);
-            if (typeof formRows[0].classes === 'string' && formRows[0].classes.includes(',')) {
-                classes = formRows[0].classes.split(',').map(c => c.trim());
+            // Fallback validation for new forms that might not be in database yet
+            const fallbackForms = {
+                'T6S3': ['Al Ghazali', 'Al Idrisi', 'Al Qazwani'],
+                'T6S1': ['Ibnu Battutah', 'Ibnu Khaldun', 'Ibnu Qayyum']
+            };
+            
+            if (fallbackForms[form] && fallbackForms[form].includes(studentClass)) {
+                // Valid form and class combination, proceed
+                console.log('Using fallback validation for form:', form, 'class:', studentClass);
             } else {
-                // Fallback to default classes
-                classes = ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'];
+                res.status(400).json({ error: 'Invalid form' });
+                return;
             }
-        }
-        
-        if (!classes.includes(studentClass)) {
-            res.status(400).json({ error: 'Invalid class for this form' });
-            return;
+        } else {
+            let classes;
+            try {
+                // Try to parse as JSON first
+                classes = JSON.parse(formRows[0].classes);
+            } catch (parseError) {
+                // If JSON parsing fails, try comma-separated string
+                console.log('JSON parse failed for form validation, classes:', formRows[0].classes);
+                if (typeof formRows[0].classes === 'string' && formRows[0].classes.includes(',')) {
+                    classes = formRows[0].classes.split(',').map(c => c.trim());
+                } else {
+                    // Fallback to default classes
+                    classes = ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'];
+                }
+            }
+            
+            if (!classes.includes(studentClass)) {
+                res.status(400).json({ error: 'Invalid class for this form' });
+                return;
+            }
         }
         
         // Auto-generate student ID if not provided
