@@ -64,7 +64,7 @@ async function initializeDatabase() {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 student_id VARCHAR(50) UNIQUE NOT NULL,
                 name VARCHAR(100) NOT NULL,
-                form VARCHAR(10) NOT NULL,
+                form INT NOT NULL,
                 class VARCHAR(20) NOT NULL,
                 barcode VARCHAR(100) UNIQUE NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -88,7 +88,7 @@ async function initializeDatabase() {
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS forms (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                form VARCHAR(10) NOT NULL,
+                form INT NOT NULL,
                 name VARCHAR(50) NOT NULL,
                 classes JSON NOT NULL
             )
@@ -107,8 +107,8 @@ async function initializeDatabase() {
                 { form: 3, name: 'Form 3', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) },
                 { form: 4, name: 'Form 4', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) },
                 { form: 5, name: 'Form 5', classes: JSON.stringify(['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest']) },
-                { form: 'T6S3', name: 'T6S3', classes: JSON.stringify(['Al Ghazali', 'Al Idrisi', 'Al Qazwani']) },
-                { form: 'T6S1', name: 'T6S1', classes: JSON.stringify(['Ibnu Battutah', 'Ibnu Khaldun', 'Ibnu Qayyum']) }
+                { form: 63, name: 'Form 63', classes: JSON.stringify(['Al Ghazali', 'Al Idrisi', 'Al Qazwani']) },
+                { form: 61, name: 'Form 61', classes: JSON.stringify(['Ibnu Battutah', 'Ibnu Khaldun', 'Ibnu Qayyum']) }
             ];
 
             for (const formData of formsData) {
@@ -248,8 +248,8 @@ app.get('/api/forms', async (req, res) => {
                 { form: 3, name: 'Form 3', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
                 { form: 4, name: 'Form 4', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
                 { form: 5, name: 'Form 5', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
-                { form: 'T6S3', name: 'T6S3', classes: ['Al Ghazali', 'Al Idrisi', 'Al Qazwani'] },
-                { form: 'T6S1', name: 'T6S1', classes: ['Ibnu Battutah', 'Ibnu Khaldun', 'Ibnu Qayyum'] }
+                { form: 63, name: 'Form 63', classes: ['Al Ghazali', 'Al Idrisi', 'Al Qazwani'] },
+                { form: 61, name: 'Form 61', classes: ['Ibnu Battutah', 'Ibnu Khaldun', 'Ibnu Qayyum'] }
             ];
             res.json(defaultForms);
             return;
@@ -336,14 +336,14 @@ app.post('/api/students', async (req, res) => {
         // Validate form and class
         const [formRows] = await connection.execute(
             'SELECT classes FROM forms WHERE form = ?',
-            [form]
+            [parseInt(form)]
         );
         
         if (formRows.length === 0) {
             // Fallback validation for new forms that might not be in database yet
             const fallbackForms = {
-                'T6S3': ['Al Ghazali', 'Al Idrisi', 'Al Qazwani'],
-                'T6S1': ['Ibnu Battutah', 'Ibnu Khaldun', 'Ibnu Qayyum']
+                63: ['Al Ghazali', 'Al Idrisi', 'Al Qazwani'],
+                61: ['Ibnu Battutah', 'Ibnu Khaldun', 'Ibnu Qayyum']
             };
             
             if (fallbackForms[form] && fallbackForms[form].includes(studentClass)) {
@@ -380,8 +380,8 @@ app.post('/api/students', async (req, res) => {
         if (!finalStudentId) {
             const year = new Date().getFullYear();
             
-            // Handle both numeric and string form values
-            const formNum = isNaN(form) ? form : parseInt(form);
+            // Handle numeric form values
+            const formNum = parseInt(form);
             
             // Get the next sequence number for this form and class
             const [countRows] = await connection.execute(
@@ -416,14 +416,14 @@ app.post('/api/students', async (req, res) => {
         
         const [result] = await connection.execute(
             'INSERT INTO students (student_id, name, form, class, barcode) VALUES (?, ?, ?, ?, ?)',
-            [finalStudentId, name, form, studentClass, barcode]
+            [finalStudentId, name, parseInt(form), studentClass, barcode]
         );
         
         const student = {
             id: result.insertId,
             student_id: finalStudentId,
             name,
-            form: form,
+            form: parseInt(form),
             class: studentClass,
             barcode
         };

@@ -343,8 +343,8 @@ async function loadForms() {
             { form: 3, classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
             { form: 4, classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
             { form: 5, classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
-            { form: 'T6S3', classes: ['Al Ghazali', 'Al Idrisi', 'Al Qazwani'] },
-            { form: 'T6S1', classes: ['Ibnu Battutah', 'Ibnu Khaldun', 'Ibnu Qayyum'] }
+            { form: 63, classes: ['Al Ghazali', 'Al Idrisi', 'Al Qazwani'] },
+            { form: 61, classes: ['Ibnu Battutah', 'Ibnu Khaldun', 'Ibnu Qayyum'] }
         ];
         console.log('Using fallback forms data:', forms);
         loadClasses();
@@ -358,8 +358,8 @@ function loadClasses() {
     const filterFormSelect = document.getElementById('filterForm');
     const filterClassSelect = document.getElementById('filterClass');
     
-    const selectedForm = formSelect.value;
-    const filterForm = filterFormSelect.value;
+    const selectedForm = parseInt(formSelect.value);
+    const filterForm = parseInt(filterFormSelect.value);
     
     console.log('Loading classes for form:', selectedForm, 'Forms data:', forms);
     console.log('Forms array length:', forms.length);
@@ -369,11 +369,11 @@ function loadClasses() {
     filterClassSelect.innerHTML = '<option value="">All Classes</option>';
     
     if (selectedForm && forms.length > 0) {
-        // Handle both numeric and string form values
+        // Handle numeric form values
         console.log('Looking for form:', selectedForm, 'Type:', typeof selectedForm);
         const formData = forms.find(f => {
-            console.log('Comparing with form:', f.form, 'Type:', typeof f.form, 'Match:', f.form == selectedForm);
-            return f.form == selectedForm;
+            console.log('Comparing with form:', f.form, 'Type:', typeof f.form, 'Match:', f.form === selectedForm);
+            return f.form === selectedForm;
         });
         console.log('Found form data:', formData);
         console.log('Available forms:', forms.map(f => f.form));
@@ -394,8 +394,8 @@ function loadClasses() {
     }
     
     if (filterForm && forms.length > 0) {
-        // Handle both numeric and string form values
-        const formData = forms.find(f => f.form == filterForm);
+        // Handle numeric form values
+        const formData = forms.find(f => f.form === filterForm);
         if (formData && formData.classes) {
             formData.classes.forEach(className => {
                 const option = document.createElement('option');
@@ -470,7 +470,7 @@ async function addStudent(event) {
             },
             body: JSON.stringify({
                 name: studentName,
-                form: isNaN(studentForm) ? studentForm : parseInt(studentForm),
+                form: parseInt(studentForm),
                 class: studentClass
             })
         });
