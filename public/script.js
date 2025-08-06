@@ -746,11 +746,11 @@ function sortStudentsByFormAndClass(students) {
     
     // Define class order for each form
     const classOrder = {
-        1: ['Advance', 'Honest', 'Smart', 'Trust'],
-        2: ['Advance', 'Honest', 'Smart', 'Trust'],
-        3: ['Advance', 'Honest', 'Smart', 'Trust'],
-        4: ['Advance', 'Honest', 'Smart', 'Trust'],
-        5: ['Advance', 'Honest', 'Smart', 'Trust'],
+        1: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'],
+        2: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'],
+        3: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'],
+        4: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'],
+        5: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'],
         63: ['Al Ghazali', 'Al Idrisi', 'Al Qazwani'],
         61: ['Ibnu Battutah', 'Ibnu Khaldun', 'Ibnu Qayyum']
     };
