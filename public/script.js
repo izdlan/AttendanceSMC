@@ -5,6 +5,8 @@ let forms = [];
 let cameraStream = null;
 let isCameraActive = false;
 let isProcessingScan = false; // Prevent multiple simultaneous scans
+let currentScannedBarcode = null; // Store the currently scanned barcode for confirmation
+let currentScannedStudent = null; // Store the scanned student data
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -49,11 +51,20 @@ function showTab(tabName) {
     // Add active class to clicked tab button
     event.target.classList.add('active');
     
-    // Focus on barcode input when scan tab is active
+    // Handle camera for scan tab
     if (tabName === 'scan') {
         setTimeout(() => {
             document.getElementById('barcodeInput').focus();
+            // Auto-start camera on mobile devices when scan tab is active
+            if (isMobileDevice() && !isCameraActive) {
+                startCamera();
+            }
         }, 100);
+    } else {
+        // Stop camera when leaving scan tab
+        if (isCameraActive) {
+            stopCamera();
+        }
     }
 }
 
@@ -1775,9 +1786,9 @@ async function startCamera() {
         isCameraActive = true;
 
         // Show camera UI
-        document.getElementById('startCameraBtn').classList.add('hidden');
-        document.getElementById('stopCameraBtn').classList.remove('hidden');
         document.getElementById('cameraVideo').classList.remove('hidden');
+        document.getElementById('cameraOverlay').classList.remove('hidden');
+        document.getElementById('cameraStatus').classList.remove('hidden');
 
         // Set video source
         const video = document.getElementById('cameraVideo');
@@ -1811,9 +1822,12 @@ function stopCamera() {
     isCameraActive = false;
 
     // Hide camera UI
-    document.getElementById('startCameraBtn').classList.remove('hidden');
-    document.getElementById('stopCameraBtn').classList.add('hidden');
     document.getElementById('cameraVideo').classList.add('hidden');
+    document.getElementById('cameraOverlay').classList.add('hidden');
+    document.getElementById('cameraStatus').classList.add('hidden');
+
+    // Hide confirmation popup if visible
+    hideConfirmationPopup();
 
     // Stop barcode detection
     if (typeof Quagga !== 'undefined') {
@@ -1873,19 +1887,12 @@ function startBarcodeDetection() {
         const code = result.codeResult.code;
         console.log('Barcode detected:', code);
         
-        // Process the scanned barcode immediately
-        processBarcode(code);
+        // Store the scanned barcode and show confirmation popup
+        currentScannedBarcode = code;
+        showConfirmationPopup(code);
         
         // Play success sound
         playSuccessSound();
-        
-        // Show success message
-        showToast(`Barcode scanned: ${code}`, 'success');
-        
-        // Stop camera after 1 second to let user see the message
-        setTimeout(() => {
-            stopCamera();
-        }, 1000);
     });
 
     Quagga.onProcessed(function(result) {
@@ -1902,11 +1909,17 @@ function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-// Show camera button only on mobile devices
+// Setup camera UI for mobile devices
 function setupCameraUI() {
     const cameraScanner = document.getElementById('cameraScanner');
     if (isMobileDevice()) {
         cameraScanner.style.display = 'block';
+        // Auto-start camera when on mobile
+        setTimeout(() => {
+            if (document.getElementById('scan').classList.contains('active')) {
+                startCamera();
+            }
+        }, 1000);
     } else {
         cameraScanner.style.display = 'none';
     }
@@ -2173,3 +2186,62 @@ async function exportAbsentReport(date) {
         showToast('Failed to export absent report', 'error');
     }
 }
+
+// Setup confirmation popup event listeners
+function setupConfirmationPopup() {
+    const confirmBtn = document.getElementById('confirmBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    
+    confirmBtn.addEventListener('click', function() {
+        if (currentScannedBarcode && currentScannedStudent) {
+            // Process the confirmed barcode
+            processBarcode(currentScannedBarcode);
+            hideConfirmationPopup();
+        }
+    });
+    
+    cancelBtn.addEventListener('click', function() {
+        hideConfirmationPopup();
+        // Restart camera for next scan
+        if (isCameraActive) {
+            startBarcodeDetection();
+        }
+    });
+}
+
+// Show confirmation popup
+function showConfirmationPopup(barcode) {
+    const popup = document.getElementById('confirmationPopup');
+    const popupTitle = document.getElementById('popupTitle');
+    const popupMessage = document.getElementById('popupMessage');
+    
+    // Find student info for the barcode
+    const student = students.find(s => s.barcode === barcode);
+    
+    if (student) {
+        popupTitle.textContent = 'Student Found!';
+        popupMessage.textContent = `${student.name} (${student.student_id}) - Form ${student.form} ${student.class}`;
+        currentScannedStudent = student;
+    } else {
+        popupTitle.textContent = 'Unknown Barcode';
+        popupMessage.textContent = `Barcode: ${barcode}`;
+        currentScannedStudent = null;
+    }
+    
+    // Show popup
+    popup.classList.add('show');
+    
+    // Play success sound
+    playSuccessSound();
+}
+
+// Hide confirmation popup
+function hideConfirmationPopup() {
+    const popup = document.getElementById('confirmationPopup');
+    popup.classList.remove('show');
+    
+    // Clear current scan data
+    currentScannedBarcode = null;
+    currentScannedStudent = null;
+}
+

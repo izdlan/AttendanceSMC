@@ -62,14 +62,54 @@
                         
                         <!-- Camera Scanner Section -->
                         <div class="camera-scanner" id="cameraScanner">
-                            <button class="btn-camera" onclick="startCamera()" id="startCameraBtn">
-                                <i class="fas fa-camera"></i> Use Camera Scanner
-                            </button>
-                            <button class="btn-camera hidden" onclick="stopCamera()" id="stopCameraBtn">
-                                <i class="fas fa-stop"></i> Stop Camera
-                            </button>
-                            <video id="cameraVideo" class="camera-video hidden" autoplay playsinline></video>
-                            <canvas id="cameraCanvas" class="camera-canvas hidden"></canvas>
+                            <div class="camera-container">
+                                <video id="cameraVideo" class="camera-video" autoplay playsinline></video>
+                                <canvas id="cameraCanvas" class="camera-canvas"></canvas>
+                                
+                                <!-- Camera Overlay with Confirmation Popup -->
+                                <div class="camera-overlay" id="cameraOverlay">
+                                    <div class="scan-target">
+                                        <div class="scan-frame">
+                                            <div class="scan-corner top-left"></div>
+                                            <div class="scan-corner top-right"></div>
+                                            <div class="scan-corner bottom-left"></div>
+                                            <div class="scan-corner bottom-right"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Confirmation Popup -->
+                                    <div class="confirmation-popup" id="confirmationPopup">
+                                        <div class="popup-content">
+                                            <div class="popup-icon">
+                                                <i class="fas fa-check-circle"></i>
+                                            </div>
+                                            <h3 id="popupTitle">Student Found!</h3>
+                                            <p id="popupMessage">Processing attendance...</p>
+                                            <div class="popup-actions">
+                                                <button class="btn-confirm" id="confirmBtn">
+                                                    <i class="fas fa-check"></i> Confirm
+                                                </button>
+                                                <button class="btn-cancel" id="cancelBtn">
+                                                    <i class="fas fa-times"></i> Cancel
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Camera Controls -->
+                                    <div class="camera-controls">
+                                        <button class="btn-camera-control" onclick="stopCamera()" id="stopCameraBtn">
+                                            <i class="fas fa-stop"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Camera Status -->
+                                <div class="camera-status" id="cameraStatus">
+                                    <i class="fas fa-camera"></i>
+                                    <span>Camera Ready - Point at barcode</span>
+                                </div>
+                            </div>
                         </div>
                         
                         <input type="text" id="barcodeInput" placeholder="Scan barcode here..." autofocus>
