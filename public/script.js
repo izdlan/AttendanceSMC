@@ -321,6 +321,16 @@ async function loadForms() {
         forms = await response.json();
         console.log('Forms loaded successfully:', forms);
         
+        // Check if we have all the expected forms (including T6S3 and T6S1)
+        const expectedForms = ['1', '2', '3', '4', '5', 'T6S3', 'T6S1'];
+        const loadedFormIds = forms.map(f => f.form.toString());
+        const missingForms = expectedForms.filter(f => !loadedFormIds.includes(f));
+        
+        if (missingForms.length > 0) {
+            console.warn('Missing forms from API:', missingForms, 'Using fallback data');
+            throw new Error('Incomplete forms data from API');
+        }
+        
         // Load classes after forms are loaded
         loadClasses();
         
