@@ -2339,18 +2339,7 @@ function hideConfirmationPopup() {
     }
 }
 
-// Test function to manually trigger confirmation popup (for debugging)
-function testConfirmationPopup() {
-    console.log('Testing confirmation popup...');
-    currentScannedBarcode = 'TEST123';
-    currentScannedStudent = {
-        name: 'Test Student',
-        student_id: 'ST001',
-        form: 1,
-        class: 'Advance'
-    };
-    showConfirmationPopup('TEST123');
-}
+
 
 // Backup click handlers for confirmation popup buttons
 function handleConfirmClick(event) {
