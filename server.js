@@ -65,7 +65,7 @@ async function initializeDatabase() {
                 student_id VARCHAR(50) UNIQUE NOT NULL,
                 name VARCHAR(100) NOT NULL,
                 form INT NOT NULL,
-                class VARCHAR(20) NOT NULL,
+                class VARCHAR(50) NOT NULL,
                 barcode VARCHAR(100) UNIQUE NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -174,6 +174,25 @@ async function migrateDatabase() {
             `);
             
             console.log('Forms table migration completed');
+        }
+        
+        // Check if students table class column needs migration
+        const [classColumns] = await connection.execute(`
+            SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'students' AND COLUMN_NAME = 'class'
+        `, [dbConfig.database]);
+        
+        if (classColumns.length > 0 && classColumns[0].CHARACTER_MAXIMUM_LENGTH < 50) {
+            console.log('Migrating students table class column to VARCHAR(50)...');
+            
+            // Update students table class column
+            await connection.execute(`
+                ALTER TABLE students 
+                MODIFY COLUMN class VARCHAR(50) NOT NULL
+            `);
+            
+            console.log('Students table class column migration completed');
         }
         
         console.log('Database migration completed successfully');
