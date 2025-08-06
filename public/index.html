@@ -63,11 +63,11 @@
                         <!-- Camera Scanner Section -->
                         <div class="camera-scanner" id="cameraScanner">
                             <div class="camera-container">
-                                <video id="cameraVideo" class="camera-video" autoplay playsinline></video>
+                                <video id="cameraVideo" class="camera-video hidden" autoplay playsinline></video>
                                 <canvas id="cameraCanvas" class="camera-canvas"></canvas>
                                 
                                 <!-- Camera Overlay with Confirmation Popup -->
-                                <div class="camera-overlay" id="cameraOverlay">
+                                <div class="camera-overlay hidden" id="cameraOverlay">
                                     <div class="scan-target">
                                         <div class="scan-frame">
                                             <div class="scan-corner top-left"></div>
@@ -86,10 +86,10 @@
                                             <h3 id="popupTitle">Student Found!</h3>
                                             <p id="popupMessage">Processing attendance...</p>
                                             <div class="popup-actions">
-                                                <button class="btn-confirm" id="confirmBtn">
+                                                <button class="btn-confirm" id="confirmBtn" onclick="handleConfirmClick(event)">
                                                     <i class="fas fa-check"></i> Confirm
                                                 </button>
-                                                <button class="btn-cancel" id="cancelBtn">
+                                                <button class="btn-cancel" id="cancelBtn" onclick="handleCancelClick(event)">
                                                     <i class="fas fa-times"></i> Cancel
                                                 </button>
                                             </div>
@@ -99,13 +99,13 @@
                                     <!-- Camera Controls -->
                                     <div class="camera-controls">
                                         <button class="btn-camera-control" onclick="stopCamera()" id="stopCameraBtn">
-                                            <i class="fas fa-stop"></i>
+                                            <i class="fas fa-stop"></i> Stop Camera
                                         </button>
                                     </div>
                                 </div>
                                 
                                 <!-- Camera Status -->
-                                <div class="camera-status" id="cameraStatus">
+                                <div class="camera-status hidden" id="cameraStatus">
                                     <i class="fas fa-camera"></i>
                                     <span>Camera Ready - Point at barcode</span>
                                 </div>
@@ -117,6 +117,12 @@
                             <input type="text" id="manualBarcode" placeholder="Or enter barcode manually">
                             <button onclick="submitManualBarcode()">
                                 <i class="fas fa-check"></i> Submit
+                            </button>
+                        </div>
+                        <!-- Test button for confirmation popup -->
+                        <div style="margin-top: 10px; text-align: center;">
+                            <button onclick="testConfirmationPopup()" style="background: #ffc107; color: #333; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer;">
+                                <i class="fas fa-bug"></i> Test Confirmation Popup
                             </button>
                         </div>
                     </div>

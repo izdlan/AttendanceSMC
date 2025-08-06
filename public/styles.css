@@ -938,21 +938,24 @@ header {
 }
 
 .btn-camera-control {
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
     color: white;
     border: none;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    font-size: 18px;
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-size: 14px;
     cursor: pointer;
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
 }
 
 .btn-camera-control:hover {
     background: rgba(220, 53, 69, 0.9);
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 /* Camera Status */
@@ -1012,9 +1015,8 @@ header {
     }
     
     .btn-camera-control {
-        width: 60px;
-        height: 60px;
-        font-size: 20px;
+        padding: 15px 25px;
+        font-size: 16px;
     }
     
     .camera-status {

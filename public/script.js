@@ -30,6 +30,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up search functionality
     setupSearch();
     
+    // Set up confirmation popup event listeners
+    setupConfirmationPopup();
+    
     console.log('SMK Chukai Attendance System initialized');
 });
 
@@ -1893,6 +1896,9 @@ function startBarcodeDetection() {
         
         // Play success sound
         playSuccessSound();
+        
+        // Stop barcode detection temporarily to prevent multiple scans
+        Quagga.pause();
     });
 
     Quagga.onProcessed(function(result) {
@@ -2189,31 +2195,92 @@ async function exportAbsentReport(date) {
 
 // Setup confirmation popup event listeners
 function setupConfirmationPopup() {
+    console.log('Setting up confirmation popup...');
+    
+    // Remove any existing event listeners to prevent duplicates
     const confirmBtn = document.getElementById('confirmBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     
-    confirmBtn.addEventListener('click', function() {
-        if (currentScannedBarcode && currentScannedStudent) {
-            // Process the confirmed barcode
-            processBarcode(currentScannedBarcode);
-            hideConfirmationPopup();
-        }
-    });
+    console.log('Found buttons:', { confirmBtn, cancelBtn });
     
-    cancelBtn.addEventListener('click', function() {
-        hideConfirmationPopup();
-        // Restart camera for next scan
-        if (isCameraActive) {
-            startBarcodeDetection();
-        }
-    });
+    if (confirmBtn) {
+        // Remove existing listeners
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+        
+        newConfirmBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Confirm button clicked!');
+            if (currentScannedBarcode && currentScannedStudent) {
+                console.log('Processing confirmed barcode:', currentScannedBarcode);
+                // Process the confirmed barcode
+                processBarcode(currentScannedBarcode);
+                hideConfirmationPopup();
+            } else {
+                console.log('No barcode or student data available');
+            }
+        });
+        
+        // Also add onclick as backup
+        newConfirmBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Confirm button onclick triggered!');
+            if (currentScannedBarcode && currentScannedStudent) {
+                console.log('Processing confirmed barcode:', currentScannedBarcode);
+                processBarcode(currentScannedBarcode);
+                hideConfirmationPopup();
+            }
+        };
+        
+        console.log('Confirm button event listeners attached');
+    } else {
+        console.error('Confirm button not found in DOM');
+    }
+    
+    if (cancelBtn) {
+        // Remove existing listeners
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+        
+        newCancelBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Cancel button clicked!');
+            hideConfirmationPopup();
+        });
+        
+        // Also add onclick as backup
+        newCancelBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Cancel button onclick triggered!');
+            hideConfirmationPopup();
+        };
+        
+        console.log('Cancel button event listeners attached');
+    } else {
+        console.error('Cancel button not found in DOM');
+    }
+    
+    console.log('Confirmation popup setup complete');
 }
 
 // Show confirmation popup
 function showConfirmationPopup(barcode) {
+    console.log('Showing confirmation popup for barcode:', barcode);
+    
     const popup = document.getElementById('confirmationPopup');
     const popupTitle = document.getElementById('popupTitle');
     const popupMessage = document.getElementById('popupMessage');
+    
+    console.log('Popup elements:', { popup, popupTitle, popupMessage });
+    
+    if (!popup) {
+        console.error('Confirmation popup element not found!');
+        return;
+    }
     
     // Find student info for the barcode
     const student = students.find(s => s.barcode === barcode);
@@ -2222,14 +2289,26 @@ function showConfirmationPopup(barcode) {
         popupTitle.textContent = 'Student Found!';
         popupMessage.textContent = `${student.name} (${student.student_id}) - Form ${student.form} ${student.class}`;
         currentScannedStudent = student;
+        console.log('Student found:', student);
     } else {
         popupTitle.textContent = 'Unknown Barcode';
         popupMessage.textContent = `Barcode: ${barcode}`;
         currentScannedStudent = null;
+        console.log('No student found for barcode:', barcode);
     }
+    
+    // Store the barcode for confirmation
+    currentScannedBarcode = barcode;
     
     // Show popup
     popup.classList.add('show');
+    console.log('Popup shown, classes:', popup.className);
+    console.log('Current scanned data:', { currentScannedBarcode, currentScannedStudent });
+    
+    // Re-setup event listeners in case they were lost
+    setTimeout(() => {
+        setupConfirmationPopup();
+    }, 100);
     
     // Play success sound
     playSuccessSound();
@@ -2237,11 +2316,60 @@ function showConfirmationPopup(barcode) {
 
 // Hide confirmation popup
 function hideConfirmationPopup() {
+    console.log('Hiding confirmation popup');
     const popup = document.getElementById('confirmationPopup');
+    
+    if (!popup) {
+        console.error('Confirmation popup element not found when trying to hide!');
+        return;
+    }
+    
     popup.classList.remove('show');
+    console.log('Popup hidden, classes:', popup.className);
     
     // Clear current scan data
     currentScannedBarcode = null;
     currentScannedStudent = null;
+    console.log('Cleared scan data');
+    
+    // Resume barcode detection
+    if (isCameraActive && typeof Quagga !== 'undefined') {
+        console.log('Resuming Quagga scanning');
+        Quagga.start();
+    }
+}
+
+// Test function to manually trigger confirmation popup (for debugging)
+function testConfirmationPopup() {
+    console.log('Testing confirmation popup...');
+    currentScannedBarcode = 'TEST123';
+    currentScannedStudent = {
+        name: 'Test Student',
+        student_id: 'ST001',
+        form: 1,
+        class: 'Advance'
+    };
+    showConfirmationPopup('TEST123');
+}
+
+// Backup click handlers for confirmation popup buttons
+function handleConfirmClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    console.log('Backup confirm handler triggered!');
+    if (currentScannedBarcode && currentScannedStudent) {
+        console.log('Processing confirmed barcode via backup handler:', currentScannedBarcode);
+        processBarcode(currentScannedBarcode);
+        hideConfirmationPopup();
+    } else {
+        console.log('No barcode or student data available in backup handler');
+    }
+}
+
+function handleCancelClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    console.log('Backup cancel handler triggered!');
+    hideConfirmationPopup();
 }
 
