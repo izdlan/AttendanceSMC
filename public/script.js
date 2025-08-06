@@ -352,6 +352,7 @@ function loadClasses() {
     const filterForm = filterFormSelect.value;
     
     console.log('Loading classes for form:', selectedForm, 'Forms data:', forms);
+    console.log('Forms array length:', forms.length);
     
     // Clear class options
     classSelect.innerHTML = '<option value="">Select Class</option>';
@@ -359,9 +360,16 @@ function loadClasses() {
     
     if (selectedForm && forms.length > 0) {
         // Handle both numeric and string form values
-        const formData = forms.find(f => f.form == selectedForm);
+        console.log('Looking for form:', selectedForm, 'Type:', typeof selectedForm);
+        const formData = forms.find(f => {
+            console.log('Comparing with form:', f.form, 'Type:', typeof f.form, 'Match:', f.form == selectedForm);
+            return f.form == selectedForm;
+        });
         console.log('Found form data:', formData);
+        console.log('Available forms:', forms.map(f => f.form));
+        
         if (formData && formData.classes) {
+            console.log('Loading classes for form', selectedForm, ':', formData.classes);
             formData.classes.forEach(className => {
                 const option = document.createElement('option');
                 option.value = className;
@@ -371,6 +379,7 @@ function loadClasses() {
             console.log('Loaded classes for form', selectedForm, ':', formData.classes);
         } else {
             console.warn('No form data found for form:', selectedForm);
+            console.warn('Available forms:', forms.map(f => ({ form: f.form, classes: f.classes })));
         }
     }
     
