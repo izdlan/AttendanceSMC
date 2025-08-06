@@ -332,7 +332,9 @@ async function loadForms() {
             { form: 2, classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
             { form: 3, classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
             { form: 4, classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
-            { form: 5, classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] }
+            { form: 5, classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+            { form: 'T6S3', classes: ['Al Ghazali', 'Al Idrisi', 'Al Qazwani'] },
+            { form: 'T6S1', classes: ['Ibnu Battutah', 'Ibnu Khaldun', 'Ibnu Qayyum'] }
         ];
         console.log('Using fallback forms data:', forms);
         loadClasses();
@@ -346,8 +348,8 @@ function loadClasses() {
     const filterFormSelect = document.getElementById('filterForm');
     const filterClassSelect = document.getElementById('filterClass');
     
-    const selectedForm = parseInt(formSelect.value);
-    const filterForm = parseInt(filterFormSelect.value);
+    const selectedForm = formSelect.value;
+    const filterForm = filterFormSelect.value;
     
     console.log('Loading classes for form:', selectedForm, 'Forms data:', forms);
     
@@ -356,7 +358,8 @@ function loadClasses() {
     filterClassSelect.innerHTML = '<option value="">All Classes</option>';
     
     if (selectedForm && forms.length > 0) {
-        const formData = forms.find(f => f.form === selectedForm);
+        // Handle both numeric and string form values
+        const formData = forms.find(f => f.form == selectedForm);
         console.log('Found form data:', formData);
         if (formData && formData.classes) {
             formData.classes.forEach(className => {
@@ -372,7 +375,8 @@ function loadClasses() {
     }
     
     if (filterForm && forms.length > 0) {
-        const formData = forms.find(f => f.form === filterForm);
+        // Handle both numeric and string form values
+        const formData = forms.find(f => f.form == filterForm);
         if (formData && formData.classes) {
             formData.classes.forEach(className => {
                 const option = document.createElement('option');
@@ -447,7 +451,7 @@ async function addStudent(event) {
             },
             body: JSON.stringify({
                 name: studentName,
-                form: parseInt(studentForm),
+                form: isNaN(studentForm) ? studentForm : parseInt(studentForm),
                 class: studentClass
             })
         });
