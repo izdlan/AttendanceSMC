@@ -404,6 +404,55 @@ function loadClasses() {
                 filterClassSelect.appendChild(option);
             });
         }
+    } else if (!filterForm && forms.length > 0) {
+        // Show all classes in logical order when no form is selected
+        const allClasses = [];
+        
+        // Add Form 1-5 classes in order
+        for (let form = 1; form <= 5; form++) {
+            const formData = forms.find(f => f.form === form);
+            if (formData && formData.classes) {
+                formData.classes.forEach(className => {
+                    allClasses.push({
+                        value: className,
+                        text: `Form ${form} ${className}`,
+                        form: form
+                    });
+                });
+            }
+        }
+        
+        // Add Form 6S3 classes
+        const form63Data = forms.find(f => f.form === 63);
+        if (form63Data && form63Data.classes) {
+            form63Data.classes.forEach(className => {
+                allClasses.push({
+                    value: className,
+                    text: `Form 6S3 ${className}`,
+                    form: 63
+                });
+            });
+        }
+        
+        // Add Form 6S1 classes
+        const form61Data = forms.find(f => f.form === 61);
+        if (form61Data && form61Data.classes) {
+            form61Data.classes.forEach(className => {
+                allClasses.push({
+                    value: className,
+                    text: `Form 6S1 ${className}`,
+                    form: 61
+                });
+            });
+        }
+        
+        // Add all classes to filter dropdown
+        allClasses.forEach(classInfo => {
+            const option = document.createElement('option');
+            option.value = classInfo.value;
+            option.textContent = classInfo.text;
+            filterClassSelect.appendChild(option);
+        });
     }
 }
 
