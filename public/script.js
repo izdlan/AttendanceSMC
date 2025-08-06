@@ -739,6 +739,45 @@ function filterStudents() {
     displayStudents(filteredStudents);
 }
 
+// Sort students by form and class in logical order
+function sortStudentsByFormAndClass(students) {
+    // Define the logical order of forms
+    const formOrder = [1, 2, 3, 4, 5, 63, 61]; // Form 1-5, then 6S3 (63), then 6S1 (61)
+    
+    // Define class order for each form
+    const classOrder = {
+        1: ['Advance', 'Honest', 'Smart', 'Trust'],
+        2: ['Advance', 'Honest', 'Smart', 'Trust'],
+        3: ['Advance', 'Honest', 'Smart', 'Trust'],
+        4: ['Advance', 'Honest', 'Smart', 'Trust'],
+        5: ['Advance', 'Honest', 'Smart', 'Trust'],
+        63: ['Al Ghazali', 'Al Idrisi', 'Al Qazwani'],
+        61: ['Ibnu Battutah', 'Ibnu Khaldun', 'Ibnu Qayyum']
+    };
+    
+    return students.sort((a, b) => {
+        // First, sort by form order
+        const formA = formOrder.indexOf(a.form);
+        const formB = formOrder.indexOf(b.form);
+        
+        if (formA !== formB) {
+            return formA - formB;
+        }
+        
+        // If same form, sort by class order
+        const classOrderForForm = classOrder[a.form] || [];
+        const classA = classOrderForForm.indexOf(a.class);
+        const classB = classOrderForForm.indexOf(b.class);
+        
+        if (classA !== classB) {
+            return classA - classB;
+        }
+        
+        // If same form and class, sort by name
+        return a.name.localeCompare(b.name);
+    });
+}
+
 // Display students
 function displayStudents(studentsToShow) {
     const studentsList = document.getElementById('studentsList');
@@ -748,7 +787,10 @@ function displayStudents(studentsToShow) {
         return;
     }
     
-    studentsList.innerHTML = studentsToShow.map(student => `
+    // Sort students by form and class before displaying
+    const sortedStudents = sortStudentsByFormAndClass(studentsToShow);
+    
+    studentsList.innerHTML = sortedStudents.map(student => `
         <div class="student-card">
             <div class="student-info">
                 <h4>${student.name}</h4>
