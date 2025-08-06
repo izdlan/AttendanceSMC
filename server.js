@@ -124,10 +124,63 @@ async function initializeDatabase() {
 
         console.log('Database initialized successfully');
         
+        // Run database migration if needed
+        await migrateDatabase();
+        
         // Clean up any existing duplicate attendance records
         await cleanupDuplicateAttendance();
     } catch (error) {
         console.error('Error initializing database:', error);
+    }
+}
+
+async function migrateDatabase() {
+    try {
+        console.log('Starting database migration...');
+        
+        // Check if students table needs migration
+        const [columns] = await connection.execute(`
+            SELECT COLUMN_NAME, DATA_TYPE 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'students' AND COLUMN_NAME = 'form'
+        `, [dbConfig.database]);
+        
+        if (columns.length > 0 && columns[0].DATA_TYPE === 'int') {
+            console.log('Migrating students table form column from INT to VARCHAR...');
+            
+            // Update students table form column
+            await connection.execute(`
+                ALTER TABLE students 
+                MODIFY COLUMN form VARCHAR(10) NOT NULL
+            `);
+            
+            console.log('Students table migration completed');
+        }
+        
+        // Check if forms table needs migration
+        const [formColumns] = await connection.execute(`
+            SELECT COLUMN_NAME, DATA_TYPE 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'forms' AND COLUMN_NAME = 'form'
+        `, [dbConfig.database]);
+        
+        if (formColumns.length > 0 && formColumns[0].DATA_TYPE === 'int') {
+            console.log('Migrating forms table form column from INT to VARCHAR...');
+            
+            // Update forms table form column
+            await connection.execute(`
+                ALTER TABLE forms 
+                MODIFY COLUMN form VARCHAR(10) NOT NULL
+            `);
+            
+            console.log('Forms table migration completed');
+        }
+        
+        console.log('Database migration completed successfully');
+        
+    } catch (error) {
+        console.error('Error during database migration:', error);
+        // Continue with normal operation even if migration fails
     }
 }
 
