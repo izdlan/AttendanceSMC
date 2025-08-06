@@ -95,6 +95,9 @@
                         <button class="btn-primary" onclick="showAddStudentForm()">
                             <i class="fas fa-plus"></i> Add Student
                         </button>
+                        <button class="btn-success" onclick="showBulkImportForm()">
+                            <i class="fas fa-file-excel"></i> Bulk Import
+                        </button>
                         <button class="btn-secondary" onclick="exportAllBarcodes()">
                             <i class="fas fa-print"></i> Print All Barcodes
                         </button>
@@ -135,6 +138,39 @@
                                     <i class="fas fa-save"></i> Add Student
                                 </button>
                                 <button type="button" class="btn-secondary" onclick="hideAddStudentForm()">
+                                    <i class="fas fa-times"></i> Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Bulk Import Form -->
+                    <div id="bulkImportForm" class="form-container hidden">
+                        <h4>Bulk Import Students</h4>
+                        <div class="import-instructions">
+                            <p><strong>Instructions:</strong></p>
+                            <ol>
+                                <li>Prepare an Excel file with columns: <strong>Name, Form, Class</strong></li>
+                                <li>Form should be: 1, 2, 3, 4, 5, 63 (6S3), or 61 (6S1)</li>
+                                <li>Class should match the available classes for each form</li>
+                                <li>Save as CSV format (.csv)</li>
+                            </ol>
+                            <p><strong>Example:</strong></p>
+                            <pre>Name,Form,Class
+Innu Qayyum,61,Ibnu Qayyum
+Ahmad Ali,63,Al Ghazali
+Siti Fatimah,1,Advance</pre>
+                        </div>
+                        <form onsubmit="bulkImportStudents(event)">
+                            <div class="form-group">
+                                <label for="csvFile">Select CSV File:</label>
+                                <input type="file" id="csvFile" accept=".csv" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn-success">
+                                    <i class="fas fa-upload"></i> Import Students
+                                </button>
+                                <button type="button" class="btn-secondary" onclick="hideBulkImportForm()">
                                     <i class="fas fa-times"></i> Cancel
                                 </button>
                             </div>

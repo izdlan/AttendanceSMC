@@ -517,6 +517,150 @@ async function loadStudents() {
     }
 }
 
+// Bulk import functions
+function showBulkImportForm() {
+    document.getElementById('bulkImportForm').classList.remove('hidden');
+    document.getElementById('addStudentForm').classList.add('hidden');
+}
+
+function hideBulkImportForm() {
+    document.getElementById('bulkImportForm').classList.add('hidden');
+    document.getElementById('bulkImportForm').querySelector('form').reset();
+}
+
+async function bulkImportStudents(event) {
+    event.preventDefault();
+    
+    const fileInput = document.getElementById('csvFile');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showToast('Please select a CSV file', 'error');
+        return;
+    }
+    
+    if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+        showToast('Please select a valid CSV file', 'error');
+        return;
+    }
+    
+    try {
+        const text = await file.text();
+        const lines = text.split('\n');
+        
+        if (lines.length < 2) {
+            showToast('CSV file must have at least a header row and one data row', 'error');
+            return;
+        }
+        
+        // Parse header
+        const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const nameIndex = header.indexOf('name');
+        const formIndex = header.indexOf('form');
+        const classIndex = header.indexOf('class');
+        
+        if (nameIndex === -1 || formIndex === -1 || classIndex === -1) {
+            showToast('CSV must have columns: Name, Form, Class', 'error');
+            return;
+        }
+        
+        // Parse data rows
+        const students = [];
+        let successCount = 0;
+        let errorCount = 0;
+        const errors = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            const values = line.split(',').map(v => v.trim());
+            if (values.length < 3) continue;
+            
+            const name = values[nameIndex];
+            const form = parseInt(values[formIndex]);
+            const className = values[classIndex];
+            
+            if (!name || !form || !className) {
+                errorCount++;
+                errors.push(`Row ${i + 1}: Missing required data`);
+                continue;
+            }
+            
+            // Validate form
+            const validForms = [1, 2, 3, 4, 5, 63, 61];
+            if (!validForms.includes(form)) {
+                errorCount++;
+                errors.push(`Row ${i + 1}: Invalid form ${form}`);
+                continue;
+            }
+            
+            // Validate class based on form
+            const formData = forms.find(f => f.form === form);
+            if (!formData || !formData.classes.includes(className)) {
+                errorCount++;
+                errors.push(`Row ${i + 1}: Invalid class "${className}" for form ${form}`);
+                continue;
+            }
+            
+            students.push({ name, form, class: className });
+        }
+        
+        if (students.length === 0) {
+            showToast('No valid students found in CSV file', 'error');
+            return;
+        }
+        
+        // Import students
+        showToast(`Importing ${students.length} students...`, 'info');
+        
+        for (const student of students) {
+            try {
+                const response = await fetch('/api/students', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: student.name,
+                        form: student.form,
+                        class: student.class
+                    })
+                });
+                
+                if (response.ok) {
+                    successCount++;
+                } else {
+                    const result = await response.json();
+                    errorCount++;
+                    errors.push(`${student.name}: ${result.error || 'Failed to add'}`);
+                }
+            } catch (error) {
+                errorCount++;
+                errors.push(`${student.name}: Connection error`);
+            }
+        }
+        
+        // Show results
+        if (successCount > 0) {
+            showToast(`Successfully imported ${successCount} students`, 'success');
+            loadStudents();
+            loadStats();
+        }
+        
+        if (errorCount > 0) {
+            console.error('Import errors:', errors);
+            showToast(`${errorCount} students failed to import. Check console for details.`, 'warning');
+        }
+        
+        hideBulkImportForm();
+        
+    } catch (error) {
+        console.error('Error processing CSV:', error);
+        showToast('Error processing CSV file', 'error');
+    }
+}
+
 // Filter students
 function filterStudents() {
     const searchTerm = document.getElementById('searchStudents').value.toLowerCase();
