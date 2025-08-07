@@ -23,28 +23,36 @@ const dbConfig = {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'attendance_smc',
-    port: process.env.DB_PORT || 3307
+    port: process.env.DB_PORT || 3306 // Default MySQL port for Railway
 };
 
 let connection;
 
 async function connectToMySQL() {
     try {
-        // First connect without database to create it if it doesn't exist
-        const tempConnection = await mysql.createConnection({
-            host: dbConfig.host,
-            user: dbConfig.user,
-            password: dbConfig.password,
-            port: dbConfig.port
-        });
+        // Check if we're in Railway (has DATABASE_URL) or local development
+        if (process.env.DATABASE_URL) {
+            // Railway deployment - use DATABASE_URL
+            connection = await mysql.createConnection(process.env.DATABASE_URL);
+            console.log('Connected to MySQL (Railway)');
+        } else {
+            // Local development - use individual config
+            // First connect without database to create it if it doesn't exist
+            const tempConnection = await mysql.createConnection({
+                host: dbConfig.host,
+                user: dbConfig.user,
+                password: dbConfig.password,
+                port: dbConfig.port
+            });
 
-        // Create database if it doesn't exist
-        await tempConnection.execute(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database}`);
-        await tempConnection.end();
+            // Create database if it doesn't exist
+            await tempConnection.execute(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database}`);
+            await tempConnection.end();
 
-        // Connect to the database
-        connection = await mysql.createConnection(dbConfig);
-        console.log('Connected to MySQL (XAMPP)');
+            // Connect to the database
+            connection = await mysql.createConnection(dbConfig);
+            console.log('Connected to MySQL (Local XAMPP)');
+        }
         
         // Initialize database tables
         await initializeDatabase();
@@ -52,6 +60,13 @@ async function connectToMySQL() {
         return connection;
     } catch (error) {
         console.error('Failed to connect to MySQL:', error);
+        console.error('Database config:', {
+            host: dbConfig.host,
+            user: dbConfig.user,
+            database: dbConfig.database,
+            port: dbConfig.port,
+            hasDatabaseUrl: !!process.env.DATABASE_URL
+        });
         process.exit(1);
     }
 }
@@ -256,6 +271,19 @@ scheduleDailyReset();
 // Get all forms and classes
 app.get('/api/forms', async (req, res) => {
     try {
+        if (!connection) {
+            console.log('No database connection, returning default forms');
+            const defaultForms = [
+                { form: 1, name: 'Form 1', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+                { form: 2, name: 'Form 2', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+                { form: 3, name: 'Form 3', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+                { form: 4, name: 'Form 4', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] },
+                { form: 5, name: 'Form 5', classes: ['Advance', 'Brilliant', 'Creative', 'Dynamic', 'Excellent', 'Generous', 'Honest'] }
+            ];
+            res.json(defaultForms);
+            return;
+        }
+
         const [rows] = await connection.execute('SELECT * FROM forms ORDER BY form');
         
         if (rows.length === 0) {
@@ -316,6 +344,12 @@ app.get('/api/forms', async (req, res) => {
 // Get all students
 app.get('/api/students', async (req, res) => {
     try {
+        if (!connection) {
+            console.log('No database connection, returning empty students list');
+            res.json([]);
+            return;
+        }
+
         const { form, class: studentClass } = req.query;
         let query = 'SELECT * FROM students';
         let params = [];
@@ -338,7 +372,8 @@ app.get('/api/students', async (req, res) => {
         const [rows] = await connection.execute(query, params);
         res.json(rows);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error in /api/students:', error);
+        res.status(500).json({ error: 'Failed to load students' });
     }
 });
 
@@ -569,6 +604,12 @@ app.post('/api/attendance/scan', async (req, res) => {
 // Get attendance for a specific date with optional filters (including status)
 app.get('/api/attendance/:date', async (req, res) => {
     try {
+        if (!connection) {
+            console.log('No database connection, returning empty attendance report');
+            res.json([]);
+            return;
+        }
+
         const { date } = req.params;
         const { form, class: studentClass, status } = req.query;
         
@@ -600,7 +641,8 @@ app.get('/api/attendance/:date', async (req, res) => {
         const [rows] = await connection.execute(query, params);
         res.json(rows);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error in /api/attendance/:date:', error);
+        res.status(500).json({ error: 'Failed to load attendance report' });
     }
 });
 
@@ -664,6 +706,17 @@ app.get('/api/absent/:date', async (req, res) => {
 // Get attendance statistics
 app.get('/api/stats', async (req, res) => {
     try {
+        if (!connection) {
+            console.log('No database connection, returning default stats');
+            res.json({
+                total_students: 0,
+                present_today: 0,
+                late_today: 0,
+                absent_today: 0
+            });
+            return;
+        }
+
         const today = new Date().toISOString().split('T')[0];
         const currentTime = new Date().toLocaleTimeString('en-US', { 
             hour12: false,
@@ -713,7 +766,8 @@ app.get('/api/stats', async (req, res) => {
         });
         
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error in /api/stats:', error);
+        res.status(500).json({ error: 'Failed to load statistics' });
     }
 });
 
@@ -907,22 +961,32 @@ app.get('/', (req, res) => {
 
 // Start server
 async function startServer() {
-    await connectToMySQL();
-    
-    app.listen(PORT, () => {
-        console.log(`SMK Chukai Attendance System running on http://localhost:${PORT}`);
-        console.log('Press Ctrl+C to stop the server');
-    });
-    
-    // Graceful shutdown
-    process.on('SIGINT', async () => {
-        console.log('\nShutting down server...');
-        if (connection) {
-            await connection.end();
-            console.log('MySQL connection closed.');
-        }
-        process.exit(0);
-    });
+    try {
+        await connectToMySQL();
+        
+        app.listen(PORT, () => {
+            console.log(`SMK Chukai Attendance System running on http://localhost:${PORT}`);
+            console.log('Press Ctrl+C to stop the server');
+        });
+        
+        // Graceful shutdown
+        process.on('SIGINT', async () => {
+            console.log('\nShutting down server...');
+            if (connection) {
+                await connection.end();
+                console.log('MySQL connection closed.');
+            }
+            process.exit(0);
+        });
+    } catch (error) {
+        console.error('Failed to start server:', error);
+        console.log('Server will start without database connection for debugging');
+        
+        app.listen(PORT, () => {
+            console.log(`SMK Chukai Attendance System running on http://localhost:${PORT} (Database connection failed)`);
+            console.log('Press Ctrl+C to stop the server');
+        });
+    }
 }
 
 startServer().catch(console.error);
